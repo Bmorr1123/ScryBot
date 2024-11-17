@@ -17,7 +17,7 @@ def main():
     intents.message_content = True
 
     scry_bot = ScryBot(intents=intents)
-    scry_bot.add_cog(scry_cog.Greetings(scry_bot))
+    scry_bot.add_cog(scry_cog.CardSearcher(scry_bot))
     scry_bot.run(os.getenv("discord_token"))
 
 

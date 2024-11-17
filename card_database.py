@@ -20,7 +20,7 @@ class CardDatabase:
 
     def find_card_index_by_name(self, card_name) -> None | int:
         non_alphanumeric_or_space = re.compile("[^a-zA-Z0-9 ]*")
-        card_name = non_alphanumeric_or_space.sub("", unidecode(card_name))
+        card_name = non_alphanumeric_or_space.sub("", unidecode(card_name)).lower()
 
         words = card_name.split(" ")
         word_count = len(words)
@@ -33,6 +33,10 @@ class CardDatabase:
 
         if None in current_index:
             return current_index[None]
+
+    def get_card_by_index(self, card_index: int) -> Card | None:
+        if 0 <= card_index < len(self.cards):
+            return self.cards[card_index]
 
     def _load_cards(self, data):
         for card in data:
@@ -64,7 +68,7 @@ class CardDatabase:
         for card_index, card in enumerate(self.cards):
             # if card_index > 10000:
             #     break
-            names = [name.strip() for name in unidecode(card.name).split("//")]
+            names = [name.strip() for name in unidecode(card.name).lower().split("//")]
             for name in names:
                 name = non_alphanumeric_or_space.sub("", name)
                 words = name.split(" ")
