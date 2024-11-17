@@ -1,4 +1,4 @@
-.idea
-.venv
-scryfall_data
+.idea/
+.venv/
+scryfall_data/
 .env
