@@ -5,6 +5,7 @@ from discord.ext import commands
 from card_database import CardDatabase
 from card import Card
 from scryfall_interface import ScryfallBulkUpdater
+from image_combiner import combine_images
 
 
 class CardSearcher(commands.Cog):
@@ -108,8 +109,23 @@ class CardSearcher(commands.Cog):
             card: Card = self.card_database.get_card_by_index(card_index)
             if card.image_uris and "large" in card.image_uris:
                 card_uris.append(card.image_uris["large"])
+            if card.card_faces:
+                for card_face in card.card_faces:
+                    if "image_uris" in card_face:
+                        if "large" in card_face["image_uris"]:
+                            card_uris.append(card_face["image_uris"]["large"])
 
-        await message.channel.send("\n".join(card_uris))
+        # Generate an image containing all the cards
+        buffer = combine_images(card_uris)
+        if buffer is not None:
+            await message.channel.send(
+                "Here are cards mentioned in the previous message!",
+                file=discord.File(buffer, filename="SolRingShouldBeBannedInCommander.png")
+            )
+        else:
+            await message.channel.send(
+                "Here are cards mentioned in the previous message!\n" + "\n".join(card_uris)
+            )
 
     # @commands.Cog.listener()
     # async def on_message_edit(self, before, after):
