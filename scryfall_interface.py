@@ -12,7 +12,7 @@ class ScryfallBulkUpdater:
         self.bulk_metadata = None
         self.load_bulk_metadata()
 
-        self.bulk_data: None | dict = self.load_bulk_data()
+        self.bulk_data: None | dict | list = self.load_bulk_data()
 
     def check_if_bulk_data_is_old(self) -> bool:
         """
