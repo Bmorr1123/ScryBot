@@ -14,6 +14,23 @@ class ScryfallBulkUpdater:
 
         self.bulk_data: None | dict = self.load_bulk_data()
 
+    def check_if_bulk_data_is_old(self) -> bool:
+        """
+        This function checks the bulk metadata to see if the currently loaded bulk data is too old.
+        If this functions returns true, then you should call load_bulk_metadata() to retrieve newer data.
+        :return:
+        """
+        self.load_bulk_metadata()
+
+        last_fetched: float = self.bulk_metadata["last_fetched"]
+        if not last_fetched:  # If we have never fetched bulk data before
+            return True
+
+        last_fetched: datetime.datetime = datetime.datetime.fromtimestamp(last_fetched)
+        # If local bulk data is too old
+        if last_fetched < datetime.datetime.now() - datetime.timedelta(hours=8):
+            return True
+
     def load_bulk_metadata(self):
         if not os.path.exists(self.bulk_metadata_path):
             print(f"Creating \"{self.bulk_metadata_path}\".")
@@ -42,7 +59,7 @@ class ScryfallBulkUpdater:
         # If we couldn't load local, download, or local old local, then we raise an error.
         raise Exception("Connection to Scryfall failed, and no local backup could be found.")
 
-    def load_local_bulk_data(self, ignore_age=False, debug=False) -> None | dict:
+    def load_local_bulk_data(self, ignore_age=False, debug=True) -> None | dict:
         last_fetched: float = self.bulk_metadata["last_fetched"]
         if not last_fetched:  # If we have never fetched bulk data before
             if debug:
@@ -92,19 +109,23 @@ class ScryfallBulkUpdater:
             return
 
         file_path = os.path.join(self.data_folder_path, download_uri.split("/")[-1])
-        start_time = time.time()
-        print(f"Downloading new bulk data...")
-        response = requests.get(download_uri, headers=self.headers)
-        print(f"Finished downloading new bulk data! Elapsed Time: {time.time() - start_time:.2f} seconds")
+        if file_path == self.bulk_metadata["data_path"] and os.path.exists(file_path):
+            print("Local bulk data file is in sync with remote bulk data.")
+        else:
+            start_time = time.time()
+            print(f"Downloading new bulk data...")
+            response = requests.get(download_uri, headers=self.headers)
+            print(f"Finished downloading new bulk data! Elapsed Time: {time.time() - start_time:.2f} seconds")
+
+            start_time = time.time()
+            print("Saving new bulk data...")
+
+            with open(file_path, "w") as file:
+                json.dump(response.json(), file, indent=4)
+            print(f"Saved new bulk data to \"{file_path}\"! Elapsed Time: {time.time() - start_time:.2f} seconds")
+
+        # Update Metadata regardless
         last_fetched = datetime.datetime.now()
-
-        start_time = time.time()
-        print("Saving new bulk data...")
-
-        with open(file_path, "w") as file:
-            json.dump(response.json(), file, indent=4)
-        print(f"Saved new bulk data to \"{file_path}\"! Elapsed Time: {time.time() - start_time:.2f} seconds")
-
         with open(self.bulk_metadata_path, "w+") as file:
             json.dump(
                 {"last_fetched": last_fetched.timestamp(), "data_path": file_path},
