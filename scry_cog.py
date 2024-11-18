@@ -35,7 +35,7 @@ class CardSearcher(commands.Cog):
         :return:
         """
         start_time = time.time()
-        words = message_content.split(" ")
+        words = message_content.replace(" // ", " ").split(" ")
         word_count = len(words)
         card_indexes_found = []
         if debug:
@@ -69,12 +69,13 @@ class CardSearcher(commands.Cog):
                 if debug:
                     print(f"\t\t\tCurrent Index: {j}")
                 later_index, later_start, later_end = card_indexes_found[j]
-                if index == later_index:
-                    break
                 later_word_count = later_end - later_start
                 later_index_range = range(later_start, later_end)
                 intersection = [value for value in index_range if value in later_index_range]
                 if intersection and later_word_count > word_count:
+                    found_within_another_card_name = True
+                    break
+                if index == later_index:
                     found_within_another_card_name = True
                     break
                 j += 1

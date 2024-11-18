@@ -20,10 +20,11 @@ class CardDatabase:
 
     def find_card_index_by_name(self, card_name) -> None | int:
         non_alphanumeric_or_space = re.compile("[^a-zA-Z0-9 ]*")
-        card_name = non_alphanumeric_or_space.sub("", unidecode(card_name)).lower()
+        card_name = non_alphanumeric_or_space.sub("", unidecode(card_name).replace(" // ", " ")).lower()
 
         words = card_name.split(" ")
         word_count = len(words)
+        print(words)
 
         current_index = self.indexed_cards
         for i in range(word_count):  # Recursive insertion
@@ -84,10 +85,13 @@ class CardDatabase:
             # if card_index > 10000:
             #     break
 
-            names = [name.strip() for name in unidecode(card.name).lower().split("//")]
-            if "//" in card.name and len(card.name.split(" ")) <= 4:
-                names = [unidecode(card.name).lower().strip()]
-                print(names)
+            names = [unidecode(card.name).lower().replace(" // ", " ")]
+            if "//" in card.name:
+                halves = unidecode(card.name).lower().split(" // ")
+                for half in halves:
+                    if len(half.split(" ")) > 1:
+                        names.append(half)
+
             for name in names:
                 name = non_alphanumeric_or_space.sub("", name)
                 words = name.split(" ")
