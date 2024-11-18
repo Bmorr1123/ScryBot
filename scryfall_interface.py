@@ -33,6 +33,8 @@ class ScryfallBulkUpdater:
 
     def load_bulk_metadata(self):
         if not os.path.exists(self.bulk_metadata_path):
+            if not os.path.exists(self.data_folder_path):
+                os.mkdir(self.data_folder_path)
             print(f"Creating \"{self.bulk_metadata_path}\".")
             with open(self.bulk_metadata_path, "w+") as file:
                 json.dump({"last_fetched": None, "data_path": None}, file, indent=4)
@@ -133,7 +135,7 @@ class ScryfallBulkUpdater:
             )
         print("Saved new metadata.")
 
-        # return response.json()
+        return response.json()
 
 
 if __name__ == "__main__":
