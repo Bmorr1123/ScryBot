@@ -1,7 +1,7 @@
 import time
 
 import discord
-from discord.ext import commands
+from discord.ext import commands, tasks
 from card_database import CardDatabase
 from card import Card
 from scryfall_interface import ScryfallBulkUpdater
@@ -14,12 +14,6 @@ class CardSearcher(commands.Cog):
         self.bulk_updater = ScryfallBulkUpdater()
         self.card_database = CardDatabase(self.bulk_updater.bulk_data)
         self._last_member = None
-
-    # @commands.Cog.listener()
-    # async def on_member_join(self, member):
-    #     channel = member.guild.system_channel
-    #     if channel is not None:
-    #         await channel.send(f'Welcome {member.mention}.')
 
     @commands.Cog.listener()
     async def on_ready(self):
@@ -90,10 +84,11 @@ class CardSearcher(commands.Cog):
             else:
                 i += 1
 
+        card_indexes_found.sort(key=lambda x: x[1])
+
         print(f"Found {len(card_indexes_found)} card names in the message. Elapsed Time: {time.time() - start_time:.2f}s")
         print(f"\t{card_indexes_found}")
         return [index for index, start, end in card_indexes_found]
-
 
     @commands.Cog.listener()
     async def on_message(self, message: discord.Message):
@@ -134,4 +129,12 @@ class CardSearcher(commands.Cog):
     #     if before and after:
     #         if before.content != after.content:
     #             ...
+
+    @tasks.loop(seconds=60 * 15)
+    async def refresh_database(self):
+        # This checks to make sure we are up-to-date with scryfall every 15 minutes.
+        if self.bulk_updater.check_if_bulk_data_is_old():
+            self.bulk_updater.load_bulk_data()
+
+        self.card_database = CardDatabase(self.bulk_updater.bulk_data)
 
