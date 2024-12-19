@@ -35,7 +35,7 @@ class CardSearcher(commands.Cog):
         :return:
         """
         start_time = time.time()
-        words = message_content.replace(" // ", " ").split(" ")
+        words = message_content.replace(" // ", " ").replace("\n", " ").split(" ")
         word_count = len(words)
         card_indexes_found = []
         if debug:
@@ -91,6 +91,29 @@ class CardSearcher(commands.Cog):
         print(f"\t{card_indexes_found}")
         return [index for index, start, end in card_indexes_found]
 
+    async def generate_and_try_to_send_card_images(self, channel, card_uris) -> bool:
+        # Generate an image containing all the cards
+        buffers = [
+            combine_images(
+                card_uris[i:min(i + 20, len(card_uris))]
+            ) for i in range(0, len(card_uris), 20)
+        ]
+        for i, buffer in enumerate(buffers):
+            try:
+                await channel.send(
+                    "Here are cards mentioned in the previous message!" if i == 0 else "",
+                    files=[
+                        discord.File(buffer, filename=f"SolRingShouldBeBannedInCommander{i}.png")
+                    ]
+                )
+            except discord.errors.HTTPException as e:
+                await channel.send(
+                    "Bro stop talking about so many cards in a single message. Chillll"
+                )
+                print(e)
+                return False
+        return True
+
     @commands.Cog.listener()
     async def on_message(self, message: discord.Message):
         if message.author.bot:
@@ -100,6 +123,8 @@ class CardSearcher(commands.Cog):
 
         print(f"Searching for card matches in message from \"{message.author}\"!")
         cards_to_post: list[int] = self.check_message_content(message.content)
+        if len(cards_to_post) == 0:
+            return
         card_uris = []
         for card_index in cards_to_post:
             card: Card = self.card_database.get_card_by_index(card_index)
@@ -111,13 +136,8 @@ class CardSearcher(commands.Cog):
                         if "large" in card_face["image_uris"]:
                             card_uris.append(card_face["image_uris"]["large"])
 
-        # Generate an image containing all the cards
-        buffer = combine_images(card_uris)
-        if buffer is not None:
-            await message.channel.send(
-                "Here are cards mentioned in the previous message!",
-                file=discord.File(buffer, filename="SolRingShouldBeBannedInCommander.png")
-            )
+        if await self.generate_and_try_to_send_card_images(message.channel, card_uris):
+            ...
         else:
             await message.channel.send(
                 "Here are cards mentioned in the previous message!\n" + "\n".join(card_uris)
