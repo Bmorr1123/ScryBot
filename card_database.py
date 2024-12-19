@@ -19,9 +19,10 @@ class CardDatabase:
         self._index_cards()
 
     def find_card_index_by_name(self, card_name) -> None | int:
-        non_alphanumeric_or_space = re.compile("[^a-zA-Z0-9 ]*")
-        card_name = non_alphanumeric_or_space.sub("", unidecode(card_name).replace(" // ", " ")).lower()
-
+        ineligible_characters = re.compile("[^a-zA-Z0-9,'+\\-_ ]*")
+        card_name = ineligible_characters.sub("", unidecode(card_name).replace(" // ", " ")).lower()
+        if not card_name.strip():
+            return None
         words = card_name.split(" ")
         word_count = len(words)
         print(words)
@@ -61,7 +62,7 @@ class CardDatabase:
                     for format, legality in card_object.legalities.items()
                 }
 
-                if card_object.set_type == "minigame":
+                if card_object.set_type in ["minigame", "memorabilia"]:
                     continue
                 if card_object.set_type == "token":
                     card_object.name = f"{card_object.name} Token"
@@ -77,7 +78,7 @@ class CardDatabase:
         start_time = time.time()
         print("Creating card name indexes.")
 
-        non_alphanumeric_or_space = re.compile("[^a-zA-Z0-9 /]*")
+        ineligible_characters = re.compile("[^a-zA-Z0-9,'+\\-_ ]*")
 
         for card_index, card in enumerate(self.cards):
             if card.digital:
@@ -93,7 +94,7 @@ class CardDatabase:
                         names.append(half)
 
             for name in names:
-                name = non_alphanumeric_or_space.sub("", name)
+                name = ineligible_characters.sub("", name)
                 words = name.split(" ")
                 word_count = len(words)
 
