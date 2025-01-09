@@ -17,7 +17,7 @@ The data is pulled from Scryfall, checking every 15 minutes to see if Scryfall h
 5) The bot will then send each image back in the discord!
 
 # How to Host it Yourself
-Due to how Discord handles bots reading messages on discord, the bot must be hosted by you in order to be added to your discord server. In order to do this, you must start by making your own bot on the Discord Developers page. There are many tutorials on how to do this online, and the process does change, so I will let you find a tutorial.
+Due to how Discord handles bots reading the contents of messages on Discord, the bot must be hosted by you in order to be added to your discord server. In order to do this, you must start by making your own bot on the Discord Developers page. There are many tutorials on how to do this online, and the process does change, so I will let you find a tutorial.
 1) After you've created a bot, you need to invite it to the server and make sure it has permissions to read the content of messages. This is located in the Bot settings: ![intents.png](readme_images%2Fintents.png)
 2) Next, make sure you have Python 3.12 (or newer).
 3) Git clone the repository onto your computer:
