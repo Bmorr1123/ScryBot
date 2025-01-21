@@ -2,9 +2,7 @@ import time
 
 import discord
 from discord.ext import commands, tasks
-from card_database import CardDatabase
-from card import Card
-from scryfall_interface import ScryfallBulkUpdater
+from scrypi import CardDatabase, Card, ScryfallBulkUpdater
 from image_combiner import combine_images
 
 

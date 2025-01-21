@@ -1,5 +1,4 @@
-import json
-from card import Card
+from .card import Card
 from unidecode import unidecode
 import re, time
 
@@ -18,14 +17,13 @@ class CardDatabase:
         self.indexed_cards = {}
         self._index_cards()
 
-    def find_card_index_by_name(self, card_name) -> None | int:
+    def find_card_index_by_name(self, card_name, return_multiple=False) -> None | int | list[int]:
         ineligible_characters = re.compile("[^a-zA-Z0-9,'+\\-_ ]*")
         card_name = ineligible_characters.sub("", unidecode(card_name).replace(" // ", " ")).lower()
         if not card_name.strip():
             return None
         words = card_name.split(" ")
         word_count = len(words)
-        print(words)
 
         current_index = self.indexed_cards
         for i in range(word_count):  # Recursive insertion
@@ -42,7 +40,11 @@ class CardDatabase:
             if card.digital or card.promo or card.set == "sld":
                 date = "1900-0-0"
             return date
+
         indexes.sort(key=lambda x: sort_func(*x), reverse=True)
+
+        if return_multiple:
+            return [index[0] for index in indexes]
 
         # Returning the most recent, non-secret-lair, non-promo, non-digital art
         return indexes[0][0]
