@@ -93,8 +93,8 @@ class CardSearcher(commands.Cog):
         # Generate an image containing all the cards
         buffers = [
             combine_images(
-                card_uris[i:min(i + 20, len(card_uris))]
-            ) for i in range(0, len(card_uris), 20)
+                card_uris[i:min(i + 10, len(card_uris))]
+            ) for i in range(0, len(card_uris), 10)
         ]
         for i, buffer in enumerate(buffers):
             try:
