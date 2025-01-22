@@ -1,4 +1,4 @@
 .idea/
 .venv/
-scryfall_data/
+scrybot_data/
 .env

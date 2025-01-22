@@ -1,20 +1,33 @@
-import time
-
 import discord
 from discord.ext import commands, tasks
-from scrypi import CardDatabase, Card, ScryfallBulkUpdater
+import detection_settings_manager as dsm
+# from scrypi import CardDatabase, Card, ScryfallBulkUpdater
+from scrypi import CardSearcher, Card
 from image_combiner import combine_images
 
 
-class CardSearcher(commands.Cog):
+detection_mode_explanation = '''
+Click one of the buttons corresponding to an option below to change your detection settings:
+
+- :green_square:  = Enable auto-detection of card names anywhere within a message. Includes english words such as the card Opt.
+- :blue_square:  = Only allow the bot to look for card names between square brackets. For example: [Opt]
+- :red_square:  = Disable all card name detection for your messages.
+- :white_large_square: = Enables auto-detection of card names, but doesn't allow auto-detection of cards with only a single word.
+
+'''
+
+
+class ScryBotCog(commands.Cog):
     def __init__(self, bot):
         self.bot = bot
-        self.bulk_updater = ScryfallBulkUpdater()
-        self.card_database = CardDatabase(self.bulk_updater.bulk_data)
+        self.card_searcher = CardSearcher()
         self._last_member = None
+        self.settings_manager = dsm.SettingsManager.get_settings_manager()
 
     @commands.Cog.listener()
     async def on_ready(self):
+        self.save_user_settings.start()
+        self.refresh_database.start()
         print("CardSearcher loaded successfully!")
 
     @commands.command()
@@ -27,69 +40,7 @@ class CardSearcher(commands.Cog):
             await ctx.send(f'Hello {member.name}... This feels familiar.')
         self._last_member = member
 
-    def check_message_content(self, message_content, debug=False) -> list[int]:
-        """
-        Checks message for any MTG card names.
-        :return:
-        """
-        start_time = time.time()
-        words = message_content.replace(" // ", " ").replace("\n", " ").split(" ")
-        word_count = len(words)
-        card_indexes_found = []
-        if debug:
-            print(f"\tTotal Words: {word_count}")
-        for i in range(word_count):
-            if debug:
-                print(f"\t\tCurrent Index: {i}")
-            for j in range(i + 1, min(word_count + 1, i + 10)):
-                word_set = words[i:j]
-                index = self.card_database.find_card_index_by_name(" ".join(word_set))
-                index_with_s_e = (index, i, j + 1)
-                if index is not None and index_with_s_e not in card_indexes_found:  # Check if it was found and isn't a duplicate
-                    card_indexes_found.append(index_with_s_e)
-        if debug:
-            print(f"\tCard indexes found: {len(card_indexes_found)} Removing card names within other card names.")
-        # Removing card names within card names
-        card_indexes_found.sort(key=lambda x: x[2] - x[1])
-
-        # Bubble search
-        i = 0
-        while i < len(card_indexes_found):
-            if debug:
-                print(f"\t\tCurrent Index: {i}")
-            index, start, end = card_indexes_found[i]
-            word_count = end - start
-            index_range = range(start, end)
-            j = i + 1
-
-            found_within_another_card_name = False
-            while j < len(card_indexes_found):
-                if debug:
-                    print(f"\t\t\tCurrent Index: {j}")
-                later_index, later_start, later_end = card_indexes_found[j]
-                later_word_count = later_end - later_start
-                later_index_range = range(later_start, later_end)
-                intersection = [value for value in index_range if value in later_index_range]
-                if intersection and later_word_count > word_count:
-                    found_within_another_card_name = True
-                    break
-                if index == later_index:
-                    found_within_another_card_name = True
-                    break
-                j += 1
-
-            if found_within_another_card_name:
-                card_indexes_found.pop(i)
-            else:
-                i += 1
-
-        card_indexes_found.sort(key=lambda x: x[1])
-
-        print(f"Found {len(card_indexes_found)} card names in the message. Elapsed Time: {time.time() - start_time:.2f}s")
-        print(f"\t{card_indexes_found}")
-        return [index for index, start, end in card_indexes_found]
-
-    async def generate_and_try_to_send_card_images(self, channel, card_uris) -> bool:
+    async def generate_and_try_to_send_card_images(self, channel, user, card_uris) -> bool:
         # Generate an image containing all the cards
         buffers = [
             combine_images(
@@ -102,7 +53,8 @@ class CardSearcher(commands.Cog):
                     "Here are cards mentioned in the previous message!" if i == 0 else "",
                     files=[
                         discord.File(buffer, filename=f"SolRingShouldBeBannedInCommander{i}.png")
-                    ]
+                    ],
+                    view=dsm.SettingsButtonView(user.id) if i == len(buffers) - 1 else None
                 )
             except discord.errors.HTTPException as e:
                 await channel.send(
@@ -119,13 +71,56 @@ class CardSearcher(commands.Cog):
         if "hello" in message.content.lower():
             await message.channel.send("Hello!")
 
-        print(f"Searching for card matches in message from \"{message.author}\"!")
-        cards_to_post: list[int] = self.check_message_content(message.content)
+        detection_mode = "auto-detect"
+        user_settings = self.settings_manager.get_settings_for_user(message.author)
+        # print(user_settings)
+        if "detection_mode" in user_settings:
+            detection_mode = user_settings["detection_mode"]
+            # print(detection_mode)
+
+#         print(f"Detection mode for {message.author.id}:", detection_mode)
+
+        cards_to_post = []
+        if detection_mode == "no-detection":
+            return
+        elif detection_mode == "auto-detect":
+            print(f"Searching for card matches in message from \"{message.author}\"!")
+            cards_to_post: list[int] = self.card_searcher.search_for_card_names_in_text(
+                message.content
+            )
+        elif detection_mode == "non-single-auto":
+            print(f"Searching for card matches in message from \"{message.author}\"!")
+            cards_to_post: list[int] = self.card_searcher.search_for_card_names_in_text(
+                message.content, min_word_length=2
+            )
+        elif detection_mode == "square-brackets":
+            message_text = message.content
+            text_to_search = ""
+            start_index = 0
+            # print("Message text", message_text[start_index:])
+            while "[" in message_text[start_index:]:
+                # print("Looking for square brackets at index", start_index)
+                start_bracket_index = message_text.find("[", start_index)
+#                 print("Found square bracket at index", start_bracket_index)
+                start_index = start_bracket_index + 1
+
+                next_start_bracket_index = message_text.find("[", start_bracket_index + 1)
+                end_bracket_index = message_text.find("]", start_bracket_index)
+#                 print("Found end square bracket at", end_bracket_index)
+                if end_bracket_index > next_start_bracket_index != -1:  # Ignores nested [
+                    start_index = next_start_bracket_index
+                elif end_bracket_index > start_bracket_index:
+                    text_to_search += message_text[start_bracket_index + 1:end_bracket_index] + "\n"
+            print(f"Searching for card matches in message from \"{message.author}\"!")
+            cards_to_post: list[int] = self.card_searcher.search_for_card_names_in_text(
+                text_to_search
+            )
+
         if len(cards_to_post) == 0:
             return
         card_uris = []
         for card_index in cards_to_post:
-            card: Card = self.card_database.get_card_by_index(card_index)
+            card: Card = self.card_searcher.get_card_by_index(card_index)
             if card.image_uris and "large" in card.image_uris:
                 card_uris.append(card.image_uris["large"])
             if card.card_faces:
@@ -134,7 +129,7 @@ class CardSearcher(commands.Cog):
                         if "large" in card_face["image_uris"]:
                             card_uris.append(card_face["image_uris"]["large"])
 
-        if await self.generate_and_try_to_send_card_images(message.channel, card_uris):
+        if await self.generate_and_try_to_send_card_images(message.channel, message.author, card_uris):
             ...
         else:
             await message.channel.send(
@@ -149,11 +144,18 @@ class CardSearcher(commands.Cog):
     #         if before.content != after.content:
     #             ...
 
+    @commands.slash_command(name="settings", guild_ids=[1262205441161822238])
+    async def settings(self, ctx: discord.ApplicationContext):
+        await ctx.respond(
+            detection_mode_explanation,
+            view=dsm.DetectionSettingsView(ctx.author.id)
+        )
+
+    @tasks.loop(seconds=30)
+    async def save_user_settings(self):
+        self.settings_manager.save_settings()
+
     @tasks.loop(seconds=60 * 15)
     async def refresh_database(self):
         # This checks to make sure we are up-to-date with scryfall every 15 minutes.
-        if self.bulk_updater.check_if_bulk_data_is_old():
-            self.bulk_updater.load_bulk_data()
-
-        self.card_database = CardDatabase(self.bulk_updater.bulk_data)
-
+        self.card_searcher.refresh_database()

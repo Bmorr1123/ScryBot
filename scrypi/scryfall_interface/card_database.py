@@ -43,9 +43,12 @@ class CardDatabase:
 
         indexes.sort(key=lambda x: sort_func(*x), reverse=True)
 
+        print("Indexes", indexes, "\nReturn Multiple", return_multiple)
         if return_multiple:
+            print("Indexes post", [index[0] for index in indexes])
             return [index[0] for index in indexes]
 
+        print("Returning Single")
         # Returning the most recent, non-secret-lair, non-promo, non-digital art
         return indexes[0][0]
 

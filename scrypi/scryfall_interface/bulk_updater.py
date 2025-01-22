@@ -3,7 +3,7 @@ import requests, json, os, datetime, time
 
 class ScryfallBulkUpdater:
     def __init__(self):
-        self.data_folder_path = "scryfall_data"
+        self.data_folder_path = "scrybot_data"
         self.bulk_metadata_path = os.path.join(self.data_folder_path, "bulk_metadata.json")
         self.bulk_data_url = "https://api.scryfall.com/bulk-data"
         self.bulk_data_type = "default_cards"
