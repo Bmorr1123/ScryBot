@@ -144,11 +144,12 @@ class ScryBotCog(commands.Cog):
     #         if before.content != after.content:
     #             ...
 
-    @commands.slash_command(name="settings", guild_ids=[1262205441161822238])
+    @commands.slash_command(name="settings")
     async def settings(self, ctx: discord.ApplicationContext):
         await ctx.respond(
             detection_mode_explanation,
-            view=dsm.DetectionSettingsView(ctx.author.id)
+            view=dsm.DetectionSettingsView(ctx.author.id),
+            ephemeral=True
         )
 
     @tasks.loop(seconds=30)
