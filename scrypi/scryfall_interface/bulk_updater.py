@@ -17,7 +17,7 @@ class ScryfallBulkUpdater:
     def check_if_bulk_data_is_old(self) -> bool:
         """
         This function checks the bulk metadata to see if the currently loaded bulk data is too old.
-        If this functions returns true, then you should call load_bulk_metadata() to retrieve newer data.
+        If this functions returns true, then you should call load_bulk_data() to retrieve newer data.
         :return:
         """
         self.load_bulk_metadata()
@@ -28,7 +28,7 @@ class ScryfallBulkUpdater:
 
         last_fetched: datetime.datetime = datetime.datetime.fromtimestamp(last_fetched)
         # If local bulk data is too old
-        if last_fetched < datetime.datetime.now() - datetime.timedelta(hours=8):
+        if last_fetched < datetime.datetime.now() - datetime.timedelta(hours=0.5):
             return True
 
     def load_bulk_metadata(self):
@@ -56,6 +56,7 @@ class ScryfallBulkUpdater:
 
         bulk_data = self.load_local_bulk_data(ignore_age=True)  # Failsafe to old data
         if bulk_data:
+            print("Couldn't download new bulk data, so loading local data.")
             return bulk_data
 
         # If we couldn't load local, download, or local old local, then we raise an error.
@@ -70,7 +71,7 @@ class ScryfallBulkUpdater:
 
         last_fetched: datetime.datetime = datetime.datetime.fromtimestamp(last_fetched)
         # If local bulk data is too old
-        if last_fetched < datetime.datetime.now() - datetime.timedelta(hours=8):
+        if last_fetched < datetime.datetime.now() - datetime.timedelta(hours=0.5):
             if debug:
                 print("Local bulk data is over 8 hours old.")
             if not ignore_age:
