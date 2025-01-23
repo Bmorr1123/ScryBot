@@ -64,6 +64,29 @@ class ScryBotCog(commands.Cog):
                 return False
         return True
 
+    def search_only_text_in_brackets(self, message: discord.Message) -> list[int]:
+        message_text = message.content
+        text_to_search = ""
+        start_index = 0
+        # print("Message text", message_text[start_index:])
+        while "[" in message_text[start_index:]:
+            # print("Looking for square brackets at index", start_index)
+            start_bracket_index = message_text.find("[", start_index)
+            #                 print("Found square bracket at index", start_bracket_index)
+            start_index = start_bracket_index + 1
+
+            next_start_bracket_index = message_text.find("[", start_bracket_index + 1)
+            end_bracket_index = message_text.find("]", start_bracket_index)
+            #                 print("Found end square bracket at", end_bracket_index)
+            if end_bracket_index > next_start_bracket_index != -1:  # Ignores nested [
+                start_index = next_start_bracket_index
+            elif end_bracket_index > start_bracket_index:
+                text_to_search += message_text[start_bracket_index + 1:end_bracket_index] + "\n"
+        print(f"Searching for card matches in message from \"{message.author}\"!")
+        return self.card_searcher.search_for_card_names_in_text(
+            text_to_search
+        )
+
     @commands.Cog.listener()
     async def on_message(self, message: discord.Message):
         if message.author.bot:
@@ -83,38 +106,18 @@ class ScryBotCog(commands.Cog):
         cards_to_post = []
         if detection_mode == "no-detection":
             return
-        elif detection_mode == "auto-detect":
-            print(f"Searching for card matches in message from \"{message.author}\"!")
+
+        print(f"Searching for card matches in message from \"{message.author}\"!")
+        if detection_mode == "auto-detect":
             cards_to_post: list[int] = self.card_searcher.search_for_card_names_in_text(
                 message.content
             )
         elif detection_mode == "non-single-auto":
-            print(f"Searching for card matches in message from \"{message.author}\"!")
             cards_to_post: list[int] = self.card_searcher.search_for_card_names_in_text(
                 message.content, min_word_length=2
-            )
+            ) + self.search_only_text_in_brackets(message)
         elif detection_mode == "square-brackets":
-            message_text = message.content
-            text_to_search = ""
-            start_index = 0
-            # print("Message text", message_text[start_index:])
-            while "[" in message_text[start_index:]:
-                # print("Looking for square brackets at index", start_index)
-                start_bracket_index = message_text.find("[", start_index)
-#                 print("Found square bracket at index", start_bracket_index)
-                start_index = start_bracket_index + 1
-
-                next_start_bracket_index = message_text.find("[", start_bracket_index + 1)
-                end_bracket_index = message_text.find("]", start_bracket_index)
-#                 print("Found end square bracket at", end_bracket_index)
-                if end_bracket_index > next_start_bracket_index != -1:  # Ignores nested [
-                    start_index = next_start_bracket_index
-                elif end_bracket_index > start_bracket_index:
-                    text_to_search += message_text[start_bracket_index + 1:end_bracket_index] + "\n"
-            print(f"Searching for card matches in message from \"{message.author}\"!")
-            cards_to_post: list[int] = self.card_searcher.search_for_card_names_in_text(
-                text_to_search
-            )
+            cards_to_post = self.search_only_text_in_brackets(message)
 
         if len(cards_to_post) == 0:
             return
@@ -156,7 +159,7 @@ class ScryBotCog(commands.Cog):
     async def save_user_settings(self):
         self.settings_manager.save_settings()
 
-    @tasks.loop(seconds=60 * 15)
+    @tasks.loop(seconds=60)
     async def refresh_database(self):
         # This checks to make sure we are up-to-date with scryfall every 15 minutes.
         self.card_searcher.refresh_database()
