@@ -84,13 +84,12 @@ class CardSearcher:
         return [index for index, start, end in card_indexes_found]
 
     def get_card_by_index(self, card_index: int) -> Card | None:
-        print(card_index)
         return self.card_database.get_card_by_index(card_index)
 
     def refresh_database(self):
         if self.bulk_updater.check_if_bulk_data_is_old():
             self.bulk_updater.load_bulk_data()
             self.card_database = CardDatabase(self.bulk_updater.bulk_data)
-            print("Refreshed Database")
+            print(f"{time.strftime("[%d/%m/%Y %H:%M:%S]", time.localtime())}: Refreshed Database")
         else:
-            print("Did not need to refresh Database")
+            print(f"{time.strftime("[%d/%m/%Y %H:%M:%S]", time.localtime())}: Did not need to refresh Database")
