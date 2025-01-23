@@ -112,8 +112,18 @@ class ScryfallBulkUpdater:
             return
 
         file_path = os.path.join(self.data_folder_path, download_uri.split("/")[-1])
+        # Update Metadata
+        last_fetched = datetime.datetime.now()
+        with open(self.bulk_metadata_path, "w+") as file:
+            json.dump(
+                {"last_fetched": last_fetched.timestamp(), "data_path": file_path},
+                file, indent=4
+            )
+        print("Saved new metadata.")
+
         if file_path == self.bulk_metadata["data_path"] and os.path.exists(file_path):
             print("Local bulk data file is in sync with remote bulk data.")
+            return
         else:
             start_time = time.time()
             print(f"Downloading new bulk data...")
@@ -126,15 +136,6 @@ class ScryfallBulkUpdater:
             with open(file_path, "w") as file:
                 json.dump(response.json(), file, indent=4)
             print(f"Saved new bulk data to \"{file_path}\"! Elapsed Time: {time.time() - start_time:.2f} seconds")
-
-        # Update Metadata regardless
-        last_fetched = datetime.datetime.now()
-        with open(self.bulk_metadata_path, "w+") as file:
-            json.dump(
-                {"last_fetched": last_fetched.timestamp(), "data_path": file_path},
-                file, indent=4
-            )
-        print("Saved new metadata.")
 
         return response.json()
 
