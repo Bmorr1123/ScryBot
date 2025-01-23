@@ -7,11 +7,11 @@ class CardDatabase:
     def __init__(self, data: list):
 
         # Removing non-cards
-        data = list(filter(lambda x: x["object"] == "card", data))
+        filtered_data = list(filter(lambda x: x["object"] == "card", data))
 
         # Converting to card objects
         self.cards: list[Card] = []
-        self._load_cards(data)
+        self._load_cards(filtered_data)
 
         # Create a data structure to quickly search for any card by name.
         self.indexed_cards = {}
