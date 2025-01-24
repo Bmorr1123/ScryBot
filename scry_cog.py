@@ -155,7 +155,7 @@ class ScryBotCog(commands.Cog):
             ephemeral=True
         )
 
-    @commands.slash_command(name="refresh", guilds=[1262205441161822238])
+    @commands.slash_command(name="refresh", guild_ids=[1262205441161822238])
     async def refresh(self, ctx: discord.ApplicationContext):
         if ctx.author.id != 138027430693568512:
             await ctx.respond(
