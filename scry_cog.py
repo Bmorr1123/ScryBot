@@ -155,6 +155,19 @@ class ScryBotCog(commands.Cog):
             ephemeral=True
         )
 
+    @commands.slash_command(name="refresh", guilds=[1262205441161822238])
+    async def refresh(self, ctx: discord.ApplicationContext):
+        if ctx.author.id != 138027430693568512:
+            await ctx.respond(
+                "You do not have permission to use this command.",
+                ephemeral=True
+            )
+            return
+        did_update = self.card_searcher.refresh_database()
+        await ctx.respond(
+            "Refreshed the DB" if did_update else "Did not refresh the DB"
+        )
+
     @tasks.loop(seconds=30)
     async def save_user_settings(self):
         self.settings_manager.save_settings()
