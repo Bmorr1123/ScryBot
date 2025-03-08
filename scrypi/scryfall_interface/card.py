@@ -88,3 +88,4 @@ class Card:
     life_modifier: str = None
     hand_modifier: str = None
     content_warning: bool = None
+    game_changer: bool = None
